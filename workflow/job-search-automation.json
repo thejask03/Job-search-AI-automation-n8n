@@ -1,0 +1,1327 @@
+{
+  "name": "End-to-End Automated Job Application & Tracking System",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "f2dfd969-c98a-4d71-9b02-8218f815f043",
+      "name": "Schedule Trigger1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        400,
+        2688
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "2rJKkhh7vjpX7pvjg",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Jobs Scraper | Remove Duplicate Jobs | Pay Per Result (cheap_scraper/linkedin-job-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/2rJKkhh7vjpX7pvjg/input"
+        },
+        "customBody": "{\n  \"enrichCompanyData\": false,\n  \"excludeRecruitingAgencies\": false,\n  \"experienceLevel\": [\n    \"entry-level\",\n    \"associate\"\n  ],\n  \"filterEasyApply\": false,\n  \"filterUnder10Applicants\": false,\n  \"jobType\": [\n    \"full-time\"\n  ],\n  \"keyword\": [\n    \"Software Engineer\",\n    \"ML Engineer\",\n    \"AI Engineer\",\n    \"Data Scientist\",\n    \"DE Shaw\",\n    \"Optiver\",\n    \"Tower Research Capital\",\n    \"Graviton Research Capital\",\n    \"Hudson River Trading\",\n    \"Jump Trading\",\n    \"Rubrik\",\n    \"Sprinklr\",\n    \"Media.net\",\n    \"CRED\",\n    \"Groww\"\n  ],\n  \"locations\": [\n    \"Remote\",\n    \"India\"\n  ],\n  \"maxItems\": 1000,\n  \"publishedAt\": \"r604800\",\n  \"requireRecruiterProfile\": false,\n  \"requireSalaryInfo\": false,\n  \"resumeKeywords\": [\n    {\n      \"aliases\": [\n        \"TS\",\n        \"JS\",\n        \"JavaScript\"\n      ],\n      \"keyword\": \"TypeScript\"\n    },\n    {\n      \"aliases\": [\n        \"Node\",\n        \"NodeJS\"\n      ],\n      \"keyword\": \"Node.js\"\n    },\n    {\n      \"aliases\": [\n        \"RN\",\n        \"React Native\",\n        \"Expo\",\n        \"ReactJS\"\n      ],\n      \"keyword\": \"React\"\n    },\n    {\n      \"aliases\": [\n        \"PostgreSQL\"\n      ],\n      \"keyword\": \"SQL\"\n    },\n    {\n      \"aliases\": [\n        \"Git\",\n        \"Docker\",\n        \"Jira\",\n        \"Postman\",\n        \"GitHub\",\n        \"GitLab\",\n        \"GitHub Copilot\",\n        \"Webpack\"\n      ],\n      \"keyword\": \"Tools\"\n    }\n  ],\n  \"saveOnlyUniqueItems\": false,\n  \"startUrls\": [\n    {\n      \"url\": \"https://www.linkedin.com/jobs/search-results/?currentJobId=4436347282&keywords=ai%20engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&referralSearchId=CiXyWw%2BhZdK0JIwm9Ue4Cw%3D%3D&geoId=102713980&f_SAL=f_SA_id_225001%3A272001%24f_SA_id_230001%3A276008%2C283003%2C284004%24f_SA_id_227001%3A276001%2C277001%24f_SA_id_226001%3A272015\"\n    },\n    {\n      \"url\": \"https://www.linkedin.com/jobs/search-results/?currentJobId=4440064568&keywords=software%20engineering%20full0time%20remote%20or%20india%20role&origin=JOB_SEARCH_PAGE_JOB_FILTER&referralSearchId=iFM4WztK9LgYsASysOelkg%3D%3D&f_SAL=f_SA_id_227001%3A276001%2C277001\"\n    }\n  ],\n  \"workType\": [\n    \"on-site\",\n    \"hybrid\",\n    \"remote\"\n  ]\n}",
+        "authentication": "apifyOAuth2Api"
+      },
+      "id": "68442605-dee8-4879-ac5b-1a71e7f98e5e",
+      "name": "Apify Actor (Job Boards)1",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        624,
+        2400
+      ],
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "YOUR_APIFYOAUTH2API_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Target companies for direct ATS pulls, grouped by the platform they run on.\n// WHY THESE: explicit >=35 LPA fresher pay in India is rare to find written in a JD,\n// so instead of keyword-hunting we target employers KNOWN to pay in that band for\n// freshers and pull their FULL board every run, rather than guessing at search keywords.\n//\n// CHECKED (2026-08-27) - confirmed live on Greenhouse/Lever/Ashby:\n//   Razorpay -> greenhouse -> razorpaysoftwareprivatelimited\n//\n// CHECKED - NOT found on Greenhouse/Lever/Ashby, so left OUT rather than guessed:\n//   DE Shaw, Optiver, Tower Research Capital, Graviton Research Capital,\n//   Hudson River Trading, Jump Trading (quant/HFT firms mostly run their own\n//   custom careers sites, e.g. deshaw.com, optiver.com - not a public ATS API)\n//   Rubrik, Sprinklr, Media.net, CRED, Groww (postings for these only surface via\n//   aggregators like BuiltIn/Naukri, which usually means Workday, Darwinbox, or a\n//   custom system behind them, not Greenhouse/Lever/Ashby)\n// If you confirm a real token for any of these later, add it below the same way.\n//\n// IMPORTANT: board tokens are set independently by each company and DO change.\n// Verify any NEW addition before relying on it:\n//   Greenhouse -> visit https://boards.greenhouse.io/<token>\n//   Lever      -> visit https://jobs.lever.co/<token>\n//   Ashby      -> visit https://jobs.ashbyhq.com/<token>\n\nconst companies = [\n  // --- Verified in the original workflow ---\n  { platform: 'greenhouse', token: 'stripe' },\n  { platform: 'lever', token: 'netflix' },\n  { platform: 'ashby', token: 'openai' },\n\n  // --- Verified 2026-08-27: high-paying Indian unicorn on Greenhouse ---\n  { platform: 'greenhouse', token: 'razorpaysoftwareprivatelimited', note: 'Razorpay' },\n];\n\nfunction buildUrl(c) {\n  if (c.platform === 'greenhouse') return `https://boards-api.greenhouse.io/v1/boards/${c.token}/jobs?content=true`;\n  if (c.platform === 'lever') return `https://api.lever.co/v0/postings/${c.token}?mode=json`;\n  if (c.platform === 'ashby') return `https://api.ashbyhq.com/posting-api/job-board/${c.token}`;\n  return null;\n}\n\nreturn companies\n  .filter(c => c.token && c.token !== '<<ADD_TOKEN>>')\n  .map(c => ({ json: { ...c, url: buildUrl(c) } }));\n"
+      },
+      "id": "1f018b0c-019a-4bc8-b22a-87551e00a20c",
+      "name": "Target Companies (ATS Boards)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        2592
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "d1247fe0-b7ae-43a9-b84f-55365f7589c0",
+      "name": "HTTP Request (ATS Boards Loop)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        848,
+        2592
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Each ATS wraps its jobs differently (Greenhouse/Ashby: { jobs: [...] }, Lever: raw array).\n// Flatten every platform into one job-per-item shape and stamp the company back on,\n// since the HTTP response itself usually doesn't repeat the company name.\nconst targets = $('Target Companies (ATS Boards)1').all();\nconst responses = $input.all();\nconst results = [];\n\nfor (let i = 0; i < responses.length; i++) {\n  const meta = (targets[i] && targets[i].json) || {};\n  const body = responses[i].json || {};\n  let jobs = [];\n\n  if (body.error) continue; // failed fetch (bad/placeholder token) - skip quietly\n\n  if (meta.platform === 'lever') {\n    jobs = Array.isArray(body) ? body : [];\n  } else {\n    jobs = Array.isArray(body.jobs) ? body.jobs : [];\n  }\n\n  for (const j of jobs) {\n    results.push({\n      json: {\n        ...j,\n        company: meta.note || meta.token,\n        source_platform: meta.platform,\n      },\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "6c725144-f29a-434d-a6ab-d62f39065fde",
+      "name": "Code Node (Normalize ATS Jobs)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        2592
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "CIHbQb2sgYrumBIIJ",
+          "mode": "list",
+          "cachedResultName": "Y Combinator Jobs Scraper (parsebird/yc-jobs-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/CIHbQb2sgYrumBIIJ/input"
+        },
+        "customBody": "{\n  \"searchQuery\": \"software engineer\",\n  \"roleFilter\": \"software-engineer\",\n  \"locationFilter\": \"Remote, India\",\n  \"maxResults\": 150\n}",
+        "authentication": "apifyOAuth2Api"
+      },
+      "id": "5a64fa2a-ea27-4cc2-9573-b233fd1bf30a",
+      "name": "Apify Actor (YC / Work at a Startup Jobs)1",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        624,
+        3600
+      ],
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "YOUR_APIFYOAUTH2API_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Normalize the REAL parsebird/yc-jobs-scraper output (confirmed field names from the\n// actor's Apify Store Input/Output docs) into our common job shape.\nconst d = $json || {};\nreturn {\n  json: {\n    title: d.title || '',\n    company: d.companyName || 'YC Startup',\n    url: d.applyUrl || d.url || '',\n    description: d.description || d.descriptionHtml || '',\n    location: d.location || 'Remote',\n    salary_min_lpa: d.salaryMin || null,\n    salary_max_lpa: d.salaryMax || null,\n    source_platform: 'yc',\n  },\n};"
+      },
+      "id": "932721f0-7066-4490-bd9b-9a9069cb3830",
+      "name": "Code Node (Tag YC Jobs)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        3600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "jV4Y8h6j3AqVj5Qur",
+          "mode": "list",
+          "cachedResultName": "Wellfound Startup Job Scraper — Equity Ranges & Job Alerts (blackfalcondata/wellfound-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/jV4Y8h6j3AqVj5Qur/input"
+        },
+        "customBody": "{\n  \"roles\": [\n    \"software-engineer\",\n    \"data-scientist\",\n    \"machine-learning-engineer\"\n  ],\n  \"location\": [\n    \"India\"\n  ],\n  \"remote\": true,\n  \"maxResults\": 300\n}",
+        "authentication": "apifyOAuth2Api"
+      },
+      "id": "f2491ae3-af29-4bd0-9fc1-4f95f52fb540",
+      "name": "Apify Actor (Wellfound Startup Jobs)1",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        624,
+        4032
+      ],
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "YOUR_APIFYOAUTH2API_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Normalize the REAL blackfalcondata/wellfound-scraper output (confirmed field names\n// from the actor's Apify Store docs) - one job per dataset item already, no page-array\n// flattening needed anymore (that was only required by the old Gemini-extraction step).\nconst d = $json || {};\nconst loc = Array.isArray(d.locationNames) ? d.locationNames.join(', ') : d.locationNames;\nreturn {\n  json: {\n    title: d.title || d.primaryRoleTitle || '',\n    company: d.companyName || 'Wellfound Startup',\n    url: d.detailUrl || d.portalUrl || '',\n    description: d.description || d.descriptionMarkdown || '',\n    location: loc || (d.remote ? 'Remote' : '') || 'Remote',\n    salary_min_lpa: d.salaryMin || null,\n    salary_max_lpa: d.salaryMax || null,\n    source_platform: 'wellfound',\n  },\n};"
+      },
+      "id": "73865345-594b-4d52-ba58-2d90a86cc973",
+      "name": "Code Node (Flatten Wellfound Jobs)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        3808
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Job_Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "d784ba2b-d776-4a84-8263-f670a62893b5",
+      "name": "Google Sheet(Get seen job-IDs)1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        3392
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLESHEETSOAUTH2API_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Tag prior tracker rows so the dedup step can tell them apart from fresh job listings.\nreturn { json: { _seen: true, job_id: ($json.Job_ID || '').toLowerCase() } };"
+      },
+      "id": "5ca3d937-8aec-4655-b276-96516e5d0609",
+      "name": "Code Node (Tag Seen Job IDs)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "CIHbQb2sgYrumBIIJ",
+          "mode": "list",
+          "cachedResultName": "Y Combinator Jobs Scraper (parsebird/yc-jobs-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/CIHbQb2sgYrumBIIJ/input"
+        },
+        "customBody": "{\n  \"searchQuery\": \"data scientist\",\n  \"roleFilter\": \"data-scientist\",\n  \"locationFilter\": \"Remote, India\",\n  \"maxResults\": 150\n}",
+        "authentication": "apifyOAuth2Api"
+      },
+      "id": "3d2a51db-2c15-4e66-ab9e-7bc64eaf2365",
+      "name": "Apify Actor (YC Data Science Jobs)1",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        624,
+        3824
+      ],
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "YOUR_APIFYOAUTH2API_CREDENTIAL_ID",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "label:INBOX",
+          "readStatus": "unread"
+        }
+      },
+      "id": "6668238f-7ff2-45b4-932a-acda3f297a4b",
+      "name": "Gmail Trigger (Inbound Emails)1",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        400,
+        3200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAILOAUTH2_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Drop newsletters, receipts, and automated no-reply spam\nconst blacklist = ['newsletter', 'marketing', 'receipt', 'order', 'promo', 'no-reply', 'noreply'];\nconst from = ($json.from || '').toLowerCase();\nconst subject = ($json.subject || '').toLowerCase();\n\nconst isSpam = blacklist.some(word => from.includes(word) || subject.includes(word));\n\nif (isSpam) {\n  return null;\n}\nreturn { json: $json };"
+      },
+      "id": "2e54fc8a-1e37-46ea-853c-bbec2d223fda",
+      "name": "Code Node (Filter Inbound & Spam)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        3280
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-pro-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-pro-latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Classify this inbound email from a company or recruiter.\nSubject: {{ $json.subject }}\nBody: {{ $json.snippet }}\n\nReturn ONLY JSON: {\"company_name\":\"Google\",\"status_update\":\"Interview Scheduled | Assessment Sent | Rejected | General Query\",\"is_action_required\":true,\"summary\":\"short summary\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "2728f52b-f8e7-4486-baff-70531fbc737e",
+      "name": "Gemini AI (Classify Recruiter Reply)1",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        3280
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLEPALMAPI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Job_Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Job_ID"
+          ],
+          "schema": [
+            {
+              "id": "Job_ID",
+              "displayName": "Job_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume_URL",
+              "displayName": "Resume_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4067cb56-7f54-4500-bbd6-a18b47fcb0ef",
+      "name": "Google Sheets(Update Inbound Status)1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1136,
+        3280
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLESHEETSOAUTH2API_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🚨 *Recruiter Update:* [{{ $('Gemini AI (Classify Recruiter Reply)1').item.json.company_name }}] *Status:* {{ $('Gemini AI (Classify Recruiter Reply)1').item.json.status_update }} *Summary:* {{ $('Gemini AI (Classify Recruiter Reply)1').item.json.summary }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "47c28208-4c92-464e-b679-4f06ae99ef5b",
+      "name": "Telegram chat(Urgent Alert)1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        3280
+      ],
+      "webhookId": "0966200c-2a82-486d-bc64-a084545a85e3",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAMAPI_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Gmail Trigger (Inbound Emails)1').item.json.id }}"
+      },
+      "id": "51732dc9-88ac-4c06-b714-71f27a04ef28",
+      "name": "Gmail (Mark Inbound Read)1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        3440
+      ],
+      "webhookId": "0fc69290-bc69-4f31-8fbf-e7f10b2f3aad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAILOAUTH2_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "id": "b7019583-1fe1-4b1e-9050-fcf82d6043d1",
+      "name": "Merge Job Sources1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1296,
+        2880
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicate against BOTH this run's batch and everything already logged in the\n// tracker (via the 'Microsoft Excel (Get Seen Job IDs)' branch), then normalize\n// schema across all sources (no network / no crypto import).\nconst seenIds = new Set();\nconst rawItems = [];\n\nfor (const item of $input.all()) {\n  const data = item.json || {};\n  if (data._seen) {\n    if (data.job_id) seenIds.add(String(data.job_id).toLowerCase());\n    continue;\n  }\n  rawItems.push(data);\n}\n\nconst batchSeen = new Set();\nconst results = [];\n\nfor (const data of rawItems) {\n  const title = data.title || data.text || '';\n  const company = data.company || data.company_name || 'Direct ATS';\n  if (!title) continue;\n\n  const key = (company + '_' + title).toLowerCase().trim();\n  let hash = 0;\n  for (let i = 0; i < key.length; i++) {\n    hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;\n  }\n  const jobId = 'job_' + Math.abs(hash).toString(16);\n\n  if (batchSeen.has(jobId) || seenIds.has(jobId)) continue; // already in this batch or already tracked from a prior run\n  batchSeen.add(jobId);\n\n  results.push({\n    json: {\n      job_id: jobId,\n      title: title,\n      company: company,\n      url: data.absolute_url || data.hostedUrl || data.url || '',\n      description: data.content || data.description || '',\n      location: (data.location && data.location.name) || (data.categories && data.categories.location) || data.location || 'Remote',\n      source_platform: data.source_platform || 'apify',\n    },\n  });\n}\n\nreturn results;"
+      },
+      "id": "ec320cb5-a184-4704-869f-8522798e70fc",
+      "name": "Code Node (Deduplication & Hash)1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        2832
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "role-check",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "data scientist|machine learning|ml engineer|ai engineer|artificial intelligence|software engineer|swe|sde|backend|full stack|research engineer|applied scientist",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "level-check",
+              "leftValue": "={{ $json.title }} {{ $json.description }}",
+              "rightValue": "director|principal|staff|vp|head of|10\\\\+ years|8\\\\+ years|architect",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            },
+            {
+              "id": "location-check",
+              "leftValue": "={{ $json.location }}",
+              "rightValue": "india|remote|bengaluru|bangalore|hyderabad|pune|mumbai|delhi|gurgaon|gurugram|chennai",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6c13cdf2-ecaf-4889-a524-3e155f903546",
+      "name": "Filter (Role, Level & Location Match)1",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        2688
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-2.5-pro",
+          "cachedResultName": "gemini-2.5-pro"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Evaluate this job description for a FRESHER / entry-level (0-1 yr experience) Data Science, AI/ML, or Software Engineering candidate based in India or open to remote.\n\nEstimate total compensation for this role AT THIS COMPANY for a fresher hire in INR LPA. If the JD does not state a number, estimate it from what you know about this company's typical fresher/new-grad pay band in India (e.g. quant trading firms and top-tier product companies routinely pay 30-80+ LPA to freshers; typical services/mid-tier product companies pay far less) rather than defaulting to a generic guess. Say so via the 'salary_source' field.\n\nOnly set meets_criteria=true if: role is Data Science/AI/ML/Software Engineering, experience level is fresher/entry-level (not senior/staff/principal), location is India or remote, AND estimated compensation is >= 30 LPA.\n\nReturn ONLY JSON: {\"score\": 85, \"salary_inr_lpa\": 45, \"salary_source\": \"stated_in_jd | company_tier_estimate\", \"meets_criteria\": true, \"key_skills\": [\"Python\",\"Distributed Systems\"]}\n\nJob: {{ $json.title }} at {{ $json.company }}\nLocation: {{ $json.location }}\nDescription: {{ $json.description }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "20036aa0-14b0-4b68-b6d8-2d6067e11a18",
+      "name": "Gemini AI (Relevance Evaluator)1",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        2688
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLEPALMAPI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "score-check",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 75,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "criteria-check",
+              "leftValue": "={{ $json.meets_criteria }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "salary-check",
+              "leftValue": "={{ $json.salary_inr_lpa }}",
+              "rightValue": 30,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "068b6bbd-5e13-4347-a98a-9e66df219800",
+      "name": "Filter (Score >= 75 & Fresher >= 30 LPA)1",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1520,
+        2688
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-5",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-5"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Optimize my master LaTeX resume specifically highlighting required skills and metrics for: {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Return only the LaTeX source."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b56b9b9e-fbe7-4b0d-888f-cc9f53c66707",
+      "name": "Claude AI (Tailor LaTeX Resume)1",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        2592
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "YOUR_ANTHROPICAPI_CREDENTIAL_ID",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://texapi.ovh/api/latex/compile/file?compiler=pdflatex",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: $json.content?.[0]?.text || $json.text || \"\" }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "0b4c5606-98bf-4490-bbf5-903d28a9591e",
+      "name": "LaTeX to PDF Compiler1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2192,
+        2688
+      ],
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "YOUR_HTTPCUSTOMAUTH_CREDENTIAL_ID",
+          "name": "Custom Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Code Node (Deduplication & Hash)1').item.json.company }}_Resume.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "YOUR_DRIVE_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "Curated_resumes",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/YOUR_DRIVE_FOLDER_ID"
+        },
+        "options": {}
+      },
+      "id": "eed34bcb-9228-4aca-9ba7-7006b88a3019",
+      "name": "Google Drive (Save PDF)1",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1824,
+        2496
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLEDRIVEOAUTH2API_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-2.5-flash",
+          "cachedResultName": "gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Draft a sharp 3-sentence application/referral email introducing my background for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Return only the email body."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "59a20a54-deba-4453-a2e9-43eb9a7fa195",
+      "name": "Gemini AI (Draft Email)1",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        2016,
+        2496
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GOOGLEPALMAPI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "=Application: {{ $('Code Node (Deduplication & Hash)1').item.json.title }}",
+        "emailType": "text",
+        "message": "={{ $json.content }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "id": "fe60c9b6-69ac-46ba-b6ce-21f7ff34ec5d",
+      "name": "Gmail (Send Application)1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2352,
+        2496
+      ],
+      "webhookId": "56048c36-004e-4d07-b7de-d162437e3155",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAILOAUTH2_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Job_Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Job_ID"
+          ],
+          "schema": [
+            {
+              "id": "Job_ID",
+              "displayName": "Job_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume_URL",
+              "displayName": "Resume_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d598c157-4f57-4e4d-9090-b6bd5542427a",
+      "name": "Google Sheet(Update Tracker)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2832,
+        2384
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLESHEETSOAUTH2API_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🚀 Application Submitted for *{{ $('Code Node (Deduplication & Hash)1').item.json.title }}* at *{{ $('Code Node (Deduplication & Hash)1').item.json.company }}*.\n📄 PDF: {{ $('Google Drive (Save PDF)1').item.json.webViewLink }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "id": "371e7052-c6e6-421b-a70f-38961af47b6f",
+      "name": "Telegram Chat(Submission Alert)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2832,
+        2592
+      ],
+      "webhookId": "5dde5a28-000c-416b-8adb-e5ce84a6f460",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAMAPI_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-5",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-5"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Write a high-converting, concise cover letter for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "af95844b-41f1-409c-9e0d-26d93687adf7",
+      "name": "Claude AI (Tailor Cover Letter)1",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        2784
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "YOUR_ANTHROPICAPI_CREDENTIAL_ID",
+          "name": "Anthropic account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Apify Actor (Job Boards)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Target Companies (ATS Boards)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Apify Actor (YC / Work at a Startup Jobs)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Apify Actor (Wellfound Startup Jobs)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheet(Get seen job-IDs)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Apify Actor (YC Data Science Jobs)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify Actor (Job Boards)1": {
+      "main": [
+        [
+          {
+            "node": "Merge Job Sources1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Target Companies (ATS Boards)1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (ATS Boards Loop)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (ATS Boards Loop)1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Normalize ATS Jobs)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node (Normalize ATS Jobs)1": {
+      "main": [
+        [
+          {
+            "node": "Merge Job Sources1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Apify Actor (YC / Work at a Startup Jobs)1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Tag YC Jobs)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node (Tag YC Jobs)1": {
+      "main": [
+        [
+          {
+            "node": "Merge Job Sources1",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Apify Actor (Wellfound Startup Jobs)1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Flatten Wellfound Jobs)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node (Flatten Wellfound Jobs)1": {
+      "main": [
+        [
+          {
+            "node": "Merge Job Sources1",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Google Sheet(Get seen job-IDs)1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Tag Seen Job IDs)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node (Tag Seen Job IDs)1": {
+      "main": [
+        [
+          {
+            "node": "Merge Job Sources1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Apify Actor (YC Data Science Jobs)1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Tag YC Jobs)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger (Inbound Emails)1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Filter Inbound & Spam)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node (Filter Inbound & Spam)1": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI (Classify Recruiter Reply)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI (Classify Recruiter Reply)1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets(Update Inbound Status)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets(Update Inbound Status)1": {
+      "main": [
+        [
+          {
+            "node": "Telegram chat(Urgent Alert)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram chat(Urgent Alert)1": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Mark Inbound Read)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Job Sources1": {
+      "main": [
+        [
+          {
+            "node": "Code Node (Deduplication & Hash)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node (Deduplication & Hash)1": {
+      "main": [
+        [
+          {
+            "node": "Filter (Role, Level & Location Match)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter (Role, Level & Location Match)1": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI (Relevance Evaluator)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI (Relevance Evaluator)1": {
+      "main": [
+        [
+          {
+            "node": "Filter (Score >= 75 & Fresher >= 30 LPA)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter (Score >= 75 & Fresher >= 30 LPA)1": {
+      "main": [
+        [
+          {
+            "node": "Claude AI (Tailor LaTeX Resume)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Claude AI (Tailor Cover Letter)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude AI (Tailor LaTeX Resume)1": {
+      "main": [
+        [
+          {
+            "node": "LaTeX to PDF Compiler1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LaTeX to PDF Compiler1": {
+      "main": [
+        [
+          {
+            "node": "Google Drive (Save PDF)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive (Save PDF)1": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI (Draft Email)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI (Draft Email)1": {
+      "main": [
+        [
+          {
+            "node": "Gmail (Send Application)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail (Send Application)1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheet(Update Tracker)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Chat(Submission Alert)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude AI (Tailor Cover Letter)1": {
+      "main": [
+        [
+          {
+            "node": "LaTeX to PDF Compiler1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [
+    {
+      "id": "210a4ea5-a1dc-49bd-b4d9-3dce02e9067e",
+      "name": "Evaluate & Tailor 1",
+      "nodeIds": [
+        "6c13cdf2-ecaf-4889-a524-3e155f903546",
+        "20036aa0-14b0-4b68-b6d8-2d6067e11a18",
+        "068b6bbd-5e13-4347-a98a-9e66df219800",
+        "b56b9b9e-fbe7-4b0d-888f-cc9f53c66707",
+        "af95844b-41f1-409c-9e0d-26d93687adf7",
+        "0b4c5606-98bf-4490-bbf5-903d28a9591e"
+      ],
+      "description": "Pre-filter by role/level/location, score fresher-fit + estimated LPA with Gemini, keep strong matches, and tailor a LaTeX resume + cover letter c"
+    },
+    {
+      "id": "b27b040c-bb1a-40ed-8b43-158ff66b3dbb",
+      "name": "Inbound Replies 1",
+      "nodeIds": [
+        "2e54fc8a-1e37-46ea-853c-bbec2d223fda",
+        "2728f52b-f8e7-4486-baff-70531fbc737e",
+        "4067cb56-7f54-4500-bbd6-a18b47fcb0ef",
+        "47c28208-4c92-464e-b679-4f06ae99ef5b",
+        "51732dc9-88ac-4c06-b714-71f27a04ef28"
+      ],
+      "description": "Classify incoming recruiter emails, update the tracker status, push an urgent alert, then mark the email read so it is not reprocessed."
+    }
+  ],
+  "tags": []
+}

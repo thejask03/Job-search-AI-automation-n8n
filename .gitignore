@@ -1,0 +1,14 @@
+# Personal n8n exports -- these carry real Sheet/Drive/Telegram IDs, the
+# operator's email, and instance-specific credential IDs. Only the sanitized
+# output of scripts/sanitize_workflow.py belongs in the repo.
+.local/
+*.raw.json
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / OneDrive
+.DS_Store
+Thumbs.db
+desktop.ini

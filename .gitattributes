@@ -1,0 +1,3 @@
+# Normalize to LF in the repo so re-exports from n8n do not show up as
+# whole-file diffs on Windows.
+* text=auto eol=lf
