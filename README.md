@@ -68,18 +68,6 @@ Related: `job_id` is a non-cryptographic djb2-style hash of `company_title` lowe
 (`'job_' + Math.abs(hash).toString(16)`). Anywhere else it gets derived, it must be computed identically or
 both dedup and the sheet's `Job_ID` matching break.
 
-## Known limitations
-
-These are real and tracked as issues, not oversights:
-
-1. Both Claude nodes feed the LaTeX compiler on the same input, so the cover letter — plain prose, not
-   LaTeX — is POSTed to `texapi.ovh` as if it were LaTeX source.
-2. The Gmail send node's `attachmentsBinary` entry is empty, so the tailored PDF is never actually attached.
-3. That same node sends to the operator's own address. The workflow is in review mode: it drafts and shows
-   you the application rather than submitting it.
-
-The workflow also ships `active: false` by design — import it, bind credentials, and run it manually before
-letting a cron loose on your inbox.
 
 ## Repo layout
 
