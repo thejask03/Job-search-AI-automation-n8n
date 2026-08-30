@@ -502,7 +502,7 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
             "typeValidation": "strict",
             "version": 3
@@ -536,7 +536,7 @@
               }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
@@ -587,7 +587,7 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
             "typeValidation": "strict",
             "version": 3
@@ -596,7 +596,7 @@
             {
               "id": "score-check",
               "leftValue": "={{ $json.score }}",
-              "rightValue": 75,
+              "rightValue": 50,
               "operator": {
                 "type": "number",
                 "operation": "gte"
@@ -614,14 +614,14 @@
             {
               "id": "salary-check",
               "leftValue": "={{ $json.salary_inr_lpa }}",
-              "rightValue": 30,
+              "rightValue": 15,
               "operator": {
                 "type": "number",
                 "operation": "gte"
               }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
