@@ -32,7 +32,7 @@ Two independent trigger branches share one Google Sheet (`Job_Tracker`, tab `App
 
 Then: `Code Node (Deduplication & Hash)1` → regex prefilter → Gemini scoring → threshold filter → `Google Drive (Get Master Resume)` → `Extract Master Resume Text` → Gemini email draft → Claude tailoring → `LaTeX to PDF Compiler1`, which fans out to **both** `Gmail (Send Application)1` (PDF attached) and `Google Drive (Save PDF)1` → `Set (Tracker Row)` → tracker append, plus a Telegram alert.
 
-The tailoring input is the operator's **master LaTeX resume**, held as a plain `.tex` file in Drive (`YOUR_RESUME_FILE_ID`). `Google Drive (Get Master Resume)` downloads it to binary `data`; `Extract Master Resume Text` turns that into `$json.master_tex`, which both the Claude and Gemini prompts interpolate. Without that pair the tailoring node has no resume to edit and Claude invents one — which is exactly what the workflow used to do.
+The tailoring input is the operator's **master resume**, held as a PDF file in Drive (`YOUR_RESUME_FILE_ID`). `Google Drive (Get Master Resume)` downloads it to binary `data`; `Extract Master Resume Text` (`operation: pdf`) turns that into `$json.master_resume_text`, plain text with no LaTeX markup, which both the Claude and Gemini prompts interpolate. Claude writes the LaTeX (including the preamble) from scratch each time, constrained to the facts in that text. Without that pair the tailoring node has no resume to edit and Claude invents one — which is exactly what the workflow used to do.
 
 **Inbound (Gmail trigger, polls every minute, unread INBOX)** — spam/newsletter blacklist code node → Gemini classifier (`jsonOutput: true`) → `appendOrUpdate` on the tracker matched by `Job_ID` → Telegram alert → mark the message read (that last step is what prevents reprocessing).
 
@@ -48,7 +48,7 @@ The tailoring input is the operator's **master LaTeX resume**, held as a plain `
 ### Models and thresholds
 
 - Gemini `models/gemini-2.5-pro` scores relevance; `gemini-2.5-flash` drafts the email; `models/gemini-pro-latest` classifies recruiter replies. All use `jsonOutput: true` and prompts that end with `Return ONLY JSON: {...}` — changing the prompt's JSON shape breaks the filter/expressions that consume it.
-- Claude `claude-sonnet-5` edits the master LaTeX resume. Its prompt forbids inventing experience, employers, degrees, dates or metrics absent from the source — that constraint is the only thing keeping the output truthful, so do not soften it. `options.maxTokens` is 8000 because a full resume truncates under the default.
+- Claude `claude-sonnet-5` writes the LaTeX resume from scratch each run, grounded in the master PDF's extracted text (`master_resume_text`). Its prompt forbids inventing experience, employers, degrees, dates or metrics absent from the source — that constraint is the only thing keeping the output truthful, so do not soften it. `options.maxTokens` is 8000 because a full resume truncates under the default.
 - The acceptance gate is `score >= 75 AND meets_criteria === true AND salary_inr_lpa >= 30`, with `typeValidation: strict` — the Gemini output must be a real number/boolean, not a string. The upstream regex filter also hard-excludes senior titles and restricts to India/remote.
 
 ### Known rough edges (do not "fix" silently — confirm intent first)

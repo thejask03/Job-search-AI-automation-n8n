@@ -502,7 +502,7 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
             "typeValidation": "strict",
             "version": 3
@@ -536,7 +536,7 @@
               }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
@@ -587,7 +587,7 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
             "typeValidation": "strict",
             "version": 3
@@ -596,7 +596,7 @@
             {
               "id": "score-check",
               "leftValue": "={{ $json.score }}",
-              "rightValue": 75,
+              "rightValue": 50,
               "operator": {
                 "type": "number",
                 "operation": "gte"
@@ -614,14 +614,14 @@
             {
               "id": "salary-check",
               "leftValue": "={{ $json.salary_inr_lpa }}",
-              "rightValue": 30,
+              "rightValue": 15,
               "operator": {
                 "type": "number",
                 "operation": "gte"
               }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
@@ -645,7 +645,7 @@
         "messages": {
           "values": [
             {
-              "content": "=You are editing an existing LaTeX resume. Do not invent experience, employers, degrees, dates or metrics that are not already present in the master source below. You may only reorder, reword, re-emphasise and trim what is there. Keep the preamble and document class exactly as given.\n\nTarget role: {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}\nSkills the evaluator flagged as required: {{ ($('Gemini AI (Relevance Evaluator)1').item.json.key_skills || []).join(', ') }}\n\nJob description:\n{{ ($('Code Node (Deduplication & Hash)1').item.json.description || '').slice(0, 4000) }}\n\nMaster LaTeX source:\n{{ $('Extract Master Resume Text').item.json.master_tex }}\n\nReturn ONLY the complete compilable LaTeX source. No commentary, no code fences."
+              "content": "=Write a complete, compilable LaTeX resume for this candidate, using only the facts in the master resume content below. Do not invent experience, employers, degrees, dates or metrics that are not already present there. You may reorder, reword, re-emphasise and trim, and you must produce valid LaTeX (including a sensible preamble) since the source below is plain text, not markup.\n\nTarget role: {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}\nSkills the evaluator flagged as required: {{ ($('Gemini AI (Relevance Evaluator)1').item.json.key_skills || []).join(', ') }}\n\nJob description:\n{{ ($('Code Node (Deduplication & Hash)1').item.json.description || '').slice(0, 4000) }}\n\nMaster resume content:\n{{ $('Extract Master Resume Text').item.json.master_resume_text }}\n\nReturn ONLY the complete compilable LaTeX source. No commentary, no code fences."
             }
           ]
         },
@@ -744,7 +744,7 @@
         "messages": {
           "values": [
             {
-              "content": "=Draft a sharp 3-sentence application email for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Ground every claim in the candidate background below - do not invent employers, projects or numbers. Return only the email body, no subject line and no placeholders.\n\nJob description:\n{{ ($('Code Node (Deduplication & Hash)1').item.json.description || '').slice(0, 2000) }}\n\nCandidate background (LaTeX resume source):\n{{ ($('Extract Master Resume Text').item.json.master_tex || '').slice(0, 6000) }}"
+              "content": "=Draft a sharp 3-sentence application email for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Ground every claim in the candidate background below - do not invent employers, projects or numbers. Return only the email body, no subject line and no placeholders.\n\nJob description:\n{{ ($('Code Node (Deduplication & Hash)1').item.json.description || '').slice(0, 2000) }}\n\nCandidate background (resume content):\n{{ ($('Extract Master Resume Text').item.json.master_resume_text || '').slice(0, 6000) }}"
             }
           ]
         },
@@ -942,10 +942,12 @@
     },
     {
       "parameters": {
-        "operation": "text",
+        "operation": "pdf",
         "binaryPropertyName": "data",
-        "destinationKey": "master_tex",
-        "options": {}
+        "destinationKey": "master_resume_text",
+        "options": {
+          "joinPages": true
+        }
       },
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,

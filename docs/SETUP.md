@@ -31,7 +31,7 @@ Each node's credential dropdown is labelled with the name below, so you can matc
 |---|---|
 | `YOUR_GOOGLE_SHEET_ID` | The document ID of your tracker sheet (from its URL). 9 occurrences. |
 | `YOUR_DRIVE_FOLDER_ID` | The Drive folder that tailored resumes get uploaded into. |
-| `YOUR_RESUME_FILE_ID` | The Drive file ID of your **master LaTeX resume**, uploaded as a plain `.tex` file (not a Google Doc — the download node does no export conversion). `Google Drive (Get Master Resume)` fetches it on every accepted job and it is what Claude edits. |
+| `YOUR_RESUME_FILE_ID` | The Drive file ID of your **master resume**, uploaded as a real PDF file (not a Google Doc — the download node does no export conversion). `Google Drive (Get Master Resume)` fetches it on every accepted job, `Extract Master Resume Text` pulls its text, and that is what Claude writes the tailored LaTeX resume from. |
 | `YOUR_TELEGRAM_CHAT_ID` | Your Telegram chat ID — message `@userinfobot` to find it. |
 | `your-email@example.com` | The address the application email is sent to. |
 | `YOUR_*_CREDENTIAL_ID` | Set by picking the credential in the node UI; do not type these in by hand. |
