@@ -645,19 +645,21 @@
         "messages": {
           "values": [
             {
-              "content": "=Optimize my master LaTeX resume specifically highlighting required skills and metrics for: {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Return only the LaTeX source."
+              "content": "=You are editing an existing LaTeX resume. Do not invent experience, employers, degrees, dates or metrics that are not already present in the master source below. You may only reorder, reword, re-emphasise and trim what is there. Keep the preamble and document class exactly as given.\n\nTarget role: {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}\nSkills the evaluator flagged as required: {{ ($('Gemini AI (Relevance Evaluator)1').item.json.key_skills || []).join(', ') }}\n\nJob description:\n{{ ($('Code Node (Deduplication & Hash)1').item.json.description || '').slice(0, 4000) }}\n\nMaster LaTeX source:\n{{ $('Extract Master Resume Text').item.json.master_tex }}\n\nReturn ONLY the complete compilable LaTeX source. No commentary, no code fences."
             }
           ]
         },
-        "options": {}
+        "options": {
+          "maxTokens": 8000
+        }
       },
       "id": "b56b9b9e-fbe7-4b0d-888f-cc9f53c66707",
       "name": "Claude AI (Tailor LaTeX Resume)1",
       "type": "@n8n/n8n-nodes-langchain.anthropic",
       "typeVersion": 1,
       "position": [
-        1968,
-        2592
+        2240,
+        2688
       ],
       "credentials": {
         "anthropicApi": {
@@ -674,7 +676,7 @@
         "genericAuthType": "httpCustomAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ source: $json.content?.[0]?.text || $json.text || \"\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ source: ($json.content?.[0]?.text || $json.text || '').replace(/^\\s*```(?:latex|tex)?\\s*\\n?/i, '').replace(/\\n?```\\s*$/, '').trim() }) }}",
         "options": {
           "response": {
             "response": {
@@ -688,7 +690,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        2192,
+        2432,
         2688
       ],
       "credentials": {
@@ -721,8 +723,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1824,
-        2496
+        2624,
+        2800
       ],
       "credentials": {
         "googleDriveOAuth2Api": {
@@ -742,7 +744,7 @@
         "messages": {
           "values": [
             {
-              "content": "=Draft a sharp 3-sentence application/referral email introducing my background for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Return only the email body."
+              "content": "=Draft a sharp 3-sentence application email for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}. Ground every claim in the candidate background below - do not invent employers, projects or numbers. Return only the email body, no subject line and no placeholders.\n\nJob description:\n{{ ($('Code Node (Deduplication & Hash)1').item.json.description || '').slice(0, 2000) }}\n\nCandidate background (LaTeX resume source):\n{{ ($('Extract Master Resume Text').item.json.master_tex || '').slice(0, 6000) }}"
             }
           ]
         },
@@ -754,8 +756,8 @@
       "type": "@n8n/n8n-nodes-langchain.googleGemini",
       "typeVersion": 1.2,
       "position": [
-        2016,
-        2496
+        2064,
+        2688
       ],
       "credentials": {
         "googlePalmApi": {
@@ -769,11 +771,13 @@
         "sendTo": "your-email@example.com",
         "subject": "=Application: {{ $('Code Node (Deduplication & Hash)1').item.json.title }}",
         "emailType": "text",
-        "message": "={{ $json.content }}",
+        "message": "={{ (() => { const j = $('Gemini AI (Draft Email)1').item.json; return j.content?.parts?.[0]?.text ?? j.text ?? (typeof j.content === 'string' ? j.content : JSON.stringify(j.content)); })() }}",
         "options": {
           "attachmentsUi": {
             "attachmentsBinary": [
-              {}
+              {
+                "property": "data"
+              }
             ]
           }
         }
@@ -783,8 +787,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        2352,
-        2496
+        2624,
+        2576
       ],
       "webhookId": "56048c36-004e-4d07-b7de-d162437e3155",
       "credentials": {
@@ -875,8 +879,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        2832,
-        2384
+        2960,
+        2800
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -898,8 +902,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2832,
-        2592
+        2784,
+        2960
       ],
       "webhookId": "5dde5a28-000c-416b-8adb-e5ce84a6f460",
       "credentials": {
@@ -911,35 +915,93 @@
     },
     {
       "parameters": {
-        "modelId": {
+        "operation": "download",
+        "fileId": {
           "__rl": true,
-          "value": "claude-sonnet-5",
-          "mode": "list",
-          "cachedResultName": "claude-sonnet-5"
+          "value": "YOUR_RESUME_FILE_ID",
+          "mode": "id"
         },
-        "messages": {
-          "values": [
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1712,
+        2688
+      ],
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Google Drive (Get Master Resume)",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLEDRIVEOAUTH2API_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "data",
+        "destinationKey": "master_tex",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        2688
+      ],
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Extract Master Resume Text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
             {
-              "content": "=Write a high-converting, concise cover letter for {{ $('Code Node (Deduplication & Hash)1').item.json.title }} at {{ $('Code Node (Deduplication & Hash)1').item.json.company }}."
+              "id": "row-job-id",
+              "name": "Job_ID",
+              "value": "={{ $('Code Node (Deduplication & Hash)1').item.json.job_id }}",
+              "type": "string"
+            },
+            {
+              "id": "row-company",
+              "name": "Company",
+              "value": "={{ $('Code Node (Deduplication & Hash)1').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "row-role",
+              "name": "Role",
+              "value": "={{ $('Code Node (Deduplication & Hash)1').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "row-status",
+              "name": "Status",
+              "value": "Applied",
+              "type": "string"
+            },
+            {
+              "id": "row-resume-url",
+              "name": "Resume_URL",
+              "value": "={{ $json.webViewLink }}",
+              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "af95844b-41f1-409c-9e0d-26d93687adf7",
-      "name": "Claude AI (Tailor Cover Letter)1",
-      "type": "@n8n/n8n-nodes-langchain.anthropic",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        1968,
-        2784
+        2784,
+        2800
       ],
-      "credentials": {
-        "anthropicApi": {
-          "id": "YOUR_ANTHROPICAPI_CREDENTIAL_ID",
-          "name": "Anthropic account"
-        }
-      }
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Set (Tracker Row)"
     }
   ],
   "pinData": {},
@@ -1204,12 +1266,7 @@
       "main": [
         [
           {
-            "node": "Claude AI (Tailor LaTeX Resume)1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Claude AI (Tailor Cover Letter)1",
+            "node": "Google Drive (Get Master Resume)",
             "type": "main",
             "index": 0
           }
@@ -1231,6 +1288,11 @@
       "main": [
         [
           {
+            "node": "Gmail (Send Application)1",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Google Drive (Save PDF)1",
             "type": "main",
             "index": 0
@@ -1242,29 +1304,7 @@
       "main": [
         [
           {
-            "node": "Gemini AI (Draft Email)1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gemini AI (Draft Email)1": {
-      "main": [
-        [
-          {
-            "node": "Gmail (Send Application)1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gmail (Send Application)1": {
-      "main": [
-        [
-          {
-            "node": "Google Sheet(Update Tracker)",
+            "node": "Set (Tracker Row)",
             "type": "main",
             "index": 0
           },
@@ -1276,11 +1316,44 @@
         ]
       ]
     },
-    "Claude AI (Tailor Cover Letter)1": {
+    "Gemini AI (Draft Email)1": {
       "main": [
         [
           {
-            "node": "LaTeX to PDF Compiler1",
+            "node": "Claude AI (Tailor LaTeX Resume)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive (Get Master Resume)": {
+      "main": [
+        [
+          {
+            "node": "Extract Master Resume Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Master Resume Text": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI (Draft Email)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set (Tracker Row)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheet(Update Tracker)",
             "type": "main",
             "index": 0
           }

@@ -44,6 +44,7 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 NODE_SECRETS = [
     ("googleSheets", "documentId", "YOUR_GOOGLE_SHEET_ID"),
     ("googleDrive", "folderId", "YOUR_DRIVE_FOLDER_ID"),
+    ("googleDrive", "fileId", "YOUR_RESUME_FILE_ID"),
     ("telegram", "chatId", "YOUR_TELEGRAM_CHAT_ID"),
 ]
 
@@ -53,9 +54,14 @@ def _param_value(params, key):
     v = params.get(key)
     if isinstance(v, dict):
         v = v.get("value")
-    if isinstance(v, str) and v and not v.startswith("="):
-        return v
-    return None
+    if not isinstance(v, str) or not v:
+        return None
+    # "=..." is an n8n expression, not a literal. "YOUR_..." is a placeholder the
+    # importer has not filled in yet -- scrubbing it to itself would trip the
+    # leak check below, so treat it as nothing to find.
+    if v.startswith("=") or v.startswith("YOUR_"):
+        return None
+    return v
 
 
 def discover(doc):
