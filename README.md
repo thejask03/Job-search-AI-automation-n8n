@@ -1,7 +1,7 @@
 # Job Search AI Automation (n8n)
 
 An end-to-end n8n workflow that finds relevant job listings across six sources every morning, scores them
-with an LLM, tailors a resume and cover letter for the ones that pass, emails the application, logs it to a
+with an LLM, tailors your master resume for the ones that pass, emails the application, logs it to a
 Google Sheet, and then classifies recruiter replies as they land in Gmail.
 
 This repo is a single exported workflow — [`workflow/job-search-automation.json`](workflow/job-search-automation.json),
@@ -50,7 +50,8 @@ cosmetic final step.
   `typeValidation: strict`, so the model's output must be a real number/boolean rather than a string.
 - **Prefilter** — a regex filter ahead of the LLM hard-excludes senior titles and restricts to India/remote,
   so scoring spend goes only to plausible roles.
-- **Tailoring** — Claude `claude-sonnet-5` writes both the LaTeX resume and the cover letter.
+- **Tailoring** — Claude `claude-sonnet-5` edits the master LaTeX resume pulled from Drive against the
+  job description, under an instruction not to invent anything absent from the source.
 - **Email draft** — Gemini `gemini-2.5-flash`. **Recruiter-reply classification** — `models/gemini-pro-latest`.
 
 ## Two invariants worth knowing before editing

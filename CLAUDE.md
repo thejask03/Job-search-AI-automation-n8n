@@ -30,7 +30,9 @@ Two independent trigger branches share one Google Sheet (`Job_Tracker`, tab `App
 | 3 | Two YC Apify runs (SWE + DS) → `Code Node (Tag YC Jobs)1` |
 | 4 | Wellfound Apify run → `Code Node (Flatten Wellfound Jobs)1` |
 
-Then: `Code Node (Deduplication & Hash)1` → regex prefilter → Gemini scoring → threshold filter → Claude tailoring → LaTeX→PDF → Drive → Gemini email draft → Gmail send → (tracker append + Telegram alert).
+Then: `Code Node (Deduplication & Hash)1` → regex prefilter → Gemini scoring → threshold filter → `Google Drive (Get Master Resume)` → `Extract Master Resume Text` → Gemini email draft → Claude tailoring → `LaTeX to PDF Compiler1`, which fans out to **both** `Gmail (Send Application)1` (PDF attached) and `Google Drive (Save PDF)1` → `Set (Tracker Row)` → tracker append, plus a Telegram alert.
+
+The tailoring input is the operator's **master LaTeX resume**, held as a plain `.tex` file in Drive (`YOUR_RESUME_FILE_ID`). `Google Drive (Get Master Resume)` downloads it to binary `data`; `Extract Master Resume Text` turns that into `$json.master_tex`, which both the Claude and Gemini prompts interpolate. Without that pair the tailoring node has no resume to edit and Claude invents one — which is exactly what the workflow used to do.
 
 **Inbound (Gmail trigger, polls every minute, unread INBOX)** — spam/newsletter blacklist code node → Gemini classifier (`jsonOutput: true`) → `appendOrUpdate` on the tracker matched by `Job_ID` → Telegram alert → mark the message read (that last step is what prevents reprocessing).
 
@@ -46,13 +48,14 @@ Then: `Code Node (Deduplication & Hash)1` → regex prefilter → Gemini scoring
 ### Models and thresholds
 
 - Gemini `models/gemini-2.5-pro` scores relevance; `gemini-2.5-flash` drafts the email; `models/gemini-pro-latest` classifies recruiter replies. All use `jsonOutput: true` and prompts that end with `Return ONLY JSON: {...}` — changing the prompt's JSON shape breaks the filter/expressions that consume it.
-- Claude `claude-sonnet-5` tailors both the LaTeX resume and the cover letter.
+- Claude `claude-sonnet-5` edits the master LaTeX resume. Its prompt forbids inventing experience, employers, degrees, dates or metrics absent from the source — that constraint is the only thing keeping the output truthful, so do not soften it. `options.maxTokens` is 8000 because a full resume truncates under the default.
 - The acceptance gate is `score >= 75 AND meets_criteria === true AND salary_inr_lpa >= 30`, with `typeValidation: strict` — the Gemini output must be a real number/boolean, not a string. The upstream regex filter also hard-excludes senior titles and restricts to India/remote.
 
 ### Known rough edges (do not "fix" silently — confirm intent first)
 
-- Both Claude nodes feed `LaTeX to PDF Compiler1` on the same input, so the cover letter (plain prose, not LaTeX) is posted to `texapi.ovh` as if it were LaTeX source.
-- `Gmail (Send Application)1` sends to the operator's own address (`your-email@example.com` in the committed file), i.e. the workflow is in review mode rather than actually applying, and its `attachmentsBinary` entry is empty.
+- `Gmail (Send Application)1` sends to the operator's own address (`your-email@example.com` in the committed file), i.e. the workflow is in review mode rather than actually applying.
+- There is no cover letter. The Gemini-drafted email body is the cover note; the old `Claude AI (Tailor Cover Letter)1` node was removed.
+- `Gmail (Send Application)1` and `Google Drive (Save PDF)1` both hang directly off `LaTeX to PDF Compiler1` rather than in series, because each drops binary from its own output and both need the PDF. Putting them back in a chain silently un-attaches the file.
 - The workflow ships with `active: false` and `binaryMode: separate`.
 
 ### Credentials (referenced by ID; must exist in the target n8n instance)

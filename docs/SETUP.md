@@ -22,7 +22,7 @@ Each node's credential dropdown is labelled with the name below, so you can matc
 | Google Gemini (PaLM) API | `Google Gemini(PaLM) Api account` | scoring, email draft, reply classifier |
 | Anthropic API | `Anthropic account` | resume + cover letter tailoring |
 | Telegram API | `Telegram account` | submission and recruiter alerts |
-| Google Drive OAuth2 | `Google Drive account` | resume PDF upload |
+| Google Drive OAuth2 | `Google Drive account` | master resume download + tailored PDF upload |
 | HTTP Custom Auth | `Custom Auth account` | the `texapi.ovh` LaTeX compiler |
 
 ## 3. Replace the placeholders
@@ -31,6 +31,7 @@ Each node's credential dropdown is labelled with the name below, so you can matc
 |---|---|
 | `YOUR_GOOGLE_SHEET_ID` | The document ID of your tracker sheet (from its URL). 9 occurrences. |
 | `YOUR_DRIVE_FOLDER_ID` | The Drive folder that tailored resumes get uploaded into. |
+| `YOUR_RESUME_FILE_ID` | The Drive file ID of your **master LaTeX resume**, uploaded as a plain `.tex` file (not a Google Doc — the download node does no export conversion). `Google Drive (Get Master Resume)` fetches it on every accepted job and it is what Claude edits. |
 | `YOUR_TELEGRAM_CHAT_ID` | Your Telegram chat ID — message `@userinfobot` to find it. |
 | `your-email@example.com` | The address the application email is sent to. |
 | `YOUR_*_CREDENTIAL_ID` | Set by picking the credential in the node UI; do not type these in by hand. |
